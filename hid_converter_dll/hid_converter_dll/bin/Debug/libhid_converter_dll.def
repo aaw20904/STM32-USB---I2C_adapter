@@ -1,0 +1,8 @@
+EXPORTS
+    DllMain @1
+    SomeFunction @2
+    clodeDevice @3
+    openDevice @4
+    readPacketFromUsbI2cAdapter @5
+    resetI2cSetBothSpeedAndSlaveAddr @6
+    sendPacketToUsbI2cAdapter @7

@@ -1,5 +1,6 @@
 #include "main.h"
 //Author: Andrii Androsovych
+//Developed in the Code::Blocks
 /**
 The DLL library for STM32F103C8 (the blue pill) to use it as USB->CDC
 The device is working in CDC COM mode
@@ -505,3 +506,4 @@ extern "C" DLL_EXPORT BOOL APIENTRY DllMain(HINSTANCE hinstDLL, DWORD fdwReason,
     }
     return TRUE; // succesful
 }
+

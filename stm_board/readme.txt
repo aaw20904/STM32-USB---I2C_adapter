@@ -14,4 +14,7 @@ PA5->SCK
 PA6->MISO
 PA7->MOSI
 ******************************
+I use LL libraries for initialization and set mode of I2C and SPI interfaces.The interrupt handlers
+and business logic (main code) was written in pure C without libraries, because I was afraid that HAL will consume RAM/FLASH memory. The HAL library was used only for USB CDC devices (it is too complex to develop our own USB stack). 
+
 NOTE: The full Cube project is inside the ZIP archive

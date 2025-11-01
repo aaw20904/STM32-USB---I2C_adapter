@@ -1,0 +1,14 @@
+EXPORTS
+    DllMain @1
+    SomeFunction @2
+    closeDevice @3
+    fullDuplexSpiTransaction @4
+    openDevice @5
+    readLastSlaveI2cReceivedPacket @6
+    readPacketFromUsbI2cAdapter @7
+    readPacketFromUsbSpiAdapter @8
+    resetI2cSetBothSpeedAndSlaveAddr @9
+    sendPacketToUsbI2cAdapter @10
+    sendPacketToUsbSpiAdapter @11
+    setupSpi @12
+    writeSlaveI2cTransmitterBuffer @13

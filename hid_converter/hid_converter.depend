@@ -70,7 +70,7 @@
 	"windows.h"
 	"stdio.h"
 
-1762017177 source:d:\c_win_proj\hid_converter\main.c
+1762275660 source:d:\c_win_proj\hid_converter\main.c
 	<stdio.h>
 	<stdlib.h>
 	<windows.h>
@@ -78,7 +78,7 @@
 	<setupapi.h>
 	"dlllib.h"
 
-1762004773 d:\c_win_proj\hid_converter\dlllib.h
+1762274663 d:\c_win_proj\hid_converter\dlllib.h
 	<windows.h>
 	"windows.h"
 	"stdio.h"

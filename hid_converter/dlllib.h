@@ -73,13 +73,13 @@ typedef int   (*pResetI2cSetBothSpeedAndSlaveAddr)(statesHandle* states,
                                                    unsigned int speedBps,
                                                    unsigned char slaveAddress);
 
-typedef short (*pReadPacketFromUsbI2cAdapter)(statesHandle* states,
+typedef short (*pReadPacketWithMasterI2c)(statesHandle* states,
                                               HANDLE* pHidHandle,
                                               unsigned char slaveAddress,
                                               unsigned char* buffer,
                                               unsigned short amountOfData);
 
-typedef short (*pSendPacketToUsbI2cAdapter)(statesHandle* states,
+typedef short (*pWritePacketWithMasterI2c)(statesHandle* states,
                                             HANDLE* pHidHandle,
                                             unsigned char slaveAddress,
                                             unsigned char* buffer,

@@ -38,8 +38,8 @@ unsigned char textString[] = {"The rabbit-hole went straight on like a tunnel fo
     pOpenDevice openDevice;
     pCloseDevice closeDevice;
     pResetI2cSetBothSpeedAndSlaveAddr resetI2cSetBothSpeedAndSlaveAddr;
-    pReadPacketFromUsbI2cAdapter readPacketFromUsbI2cAdapter;
-    pSendPacketToUsbI2cAdapter sendPacketToUsbI2cAdapter;
+    pReadPacketWithMasterI2c readPacketWithMasterI2c;
+    pWritePacketWithMasterI2c writePacketWithMasterI2c;
     pReadLastSlaveI2cReceivedPacket readLastSlaveI2cReceivedPacket;
     pWriteSlaveI2cTransmitterBuffer writeSlaveI2cTransmitterBuffer;
     pSetupSpi setupSpi;
@@ -79,12 +79,12 @@ int main (void) {
     resetI2cSetBothSpeedAndSlaveAddr =
                   (pResetI2cSetBothSpeedAndSlaveAddr)
                   GetProcAddress(hMyLib, "resetI2cSetBothSpeedAndSlaveAddr");
-    readPacketFromUsbI2cAdapter =
-                  (pReadPacketFromUsbI2cAdapter)
-                  GetProcAddress(hMyLib, "readPacketFromUsbI2cAdapter");
-    sendPacketToUsbI2cAdapter =
-                  (pSendPacketToUsbI2cAdapter)
-                  GetProcAddress(hMyLib, "sendPacketToUsbI2cAdapter");
+    readPacketWithMasterI2c =
+                  (pReadPacketWithMasterI2c)
+                  GetProcAddress(hMyLib, "readPacketWithMasterI2c");
+    writePacketWithMasterI2c =
+                  (pWritePacketWithMasterI2c)
+                  GetProcAddress(hMyLib, "writePacketWithMasterI2c");
      readLastSlaveI2cReceivedPacket =
                   (pReadLastSlaveI2cReceivedPacket)
                   GetProcAddress(hMyLib, "readLastSlaveI2cReceivedPacket");
@@ -104,7 +104,7 @@ int main (void) {
 
      if (!someFunction || !openDevice || !closeDevice || !sendPacketToUsbSpiAdapter ||
         !resetI2cSetBothSpeedAndSlaveAddr || !readPacketFromUsbSpiAdapter ||
-        !readPacketFromUsbI2cAdapter || !sendPacketToUsbI2cAdapter ||  !fullDuplexSpiTransaction ||
+        !readPacketWithMasterI2c || !writePacketWithMasterI2c ||  !fullDuplexSpiTransaction ||
         !readLastSlaveI2cReceivedPacket || !writeSlaveI2cTransmitterBuffer|| !setupSpi) {
         printf("Failed to resolve one or more functions, error %lu\n", GetLastError());
         FreeLibrary(hMyLib);
@@ -129,17 +129,21 @@ int main (void) {
         sendPacketToUsbSpiAdapter(&mashineHandle,&hSerial,textString,80);
         memset(test,0x00,256);
        readPacketFromUsbSpiAdapter(&mashineHandle,&hSerial,test,2);
-        fullDuplexSpiTransaction(&mashineHandle,&hSerial,textString,test,100);
+       memset(test,0x00,256);
+        fullDuplexSpiTransaction(&mashineHandle,&hSerial,textString,test,80);
+        printf("%s \n",test);
 
   /*Example for I2C*/
+
        resetI2cSetBothSpeedAndSlaveAddr(&mashineHandle, &hSerial,10000, 40);
        //send 100 bytes through master Tx to slave Rx
-       printf("Write status: %d \n", sendPacketToUsbI2cAdapter(&mashineHandle, &hSerial,40,usbOutBuffer,0x0064));
+       printf("Write status: %d \n", writePacketWithMasterI2c(&mashineHandle, &hSerial,40,usbOutBuffer,0x0064));
           //write in slave Tx buffer (about hole rabbit)
           writeSlaveI2cTransmitterBuffer(&mashineHandle,&hSerial,textString,0x0064);
           //read data by master Rx, from slave Tx
-       printf("read status: %d \n", readPacketFromUsbI2cAdapter(&mashineHandle, &hSerial,40,usbInBuffer,0x0064));
+       printf("read status: %d \n", readPacketWithMasterI2c(&mashineHandle, &hSerial,40,usbInBuffer,0x0064));
        printf("%s \n", usbInBuffer);
+       writePacketWithMasterI2c(&mashineHandle,&hSerial,40,textString,0x0064);
          //read data from slave Rx buffer
       readLastSlaveI2cReceivedPacket(&mashineHandle,&hSerial,usbInBuffer,&slaveDeviceDataCount);
       printf("%s \n", usbInBuffer);

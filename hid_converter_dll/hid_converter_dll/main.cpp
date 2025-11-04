@@ -143,7 +143,7 @@ int DLL_EXPORT resetI2cSetBothSpeedAndSlaveAddr(statesHandle * states,HANDLE* pH
 
 **/
 
-short DLL_EXPORT readPacketFromUsbI2cAdapter(statesHandle * states,
+short DLL_EXPORT readPacketWithMasterI2c(statesHandle * states,
                               HANDLE* pHidHandle,
                               unsigned char slaveAddress,
                               unsigned char* buffer,
@@ -249,7 +249,7 @@ short DLL_EXPORT readPacketFromUsbI2cAdapter(statesHandle * states,
   @ amountOfData - amount of data to be transmitted (bytes)
 
 **/
-short DLL_EXPORT sendPacketToUsbI2cAdapter(statesHandle * states,
+short DLL_EXPORT writePacketWithMasterI2c(statesHandle * states,
                               HANDLE* pHidHandle,
                               unsigned char slaveAddress,
                               unsigned char* buffer,
@@ -410,7 +410,7 @@ short DLL_EXPORT readLastSlaveI2cReceivedPacket (statesHandle * states,
           //5)Response to a device with 'read_from_i2c_dev'
           reportBufferDev[0] =  data_to_host;
           //WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)
-        if (!readPacketFromUsbDev(*pHidHandle, reportBufferDev, &bytesProcessed)) {
+        if (!writePacketToUsbDev(*pHidHandle, reportBufferDev, &bytesProcessed)) {
 
               return GetLastError();
            }

@@ -5,10 +5,10 @@ EXPORTS
     fullDuplexSpiTransaction @4
     openDevice @5
     readLastSlaveI2cReceivedPacket @6
-    readPacketFromUsbI2cAdapter @7
-    readPacketFromUsbSpiAdapter @8
+    readPacketFromUsbSpiAdapter @7
+    readPacketWithMasterI2c @8
     resetI2cSetBothSpeedAndSlaveAddr @9
-    sendPacketToUsbI2cAdapter @10
-    sendPacketToUsbSpiAdapter @11
-    setupSpi @12
+    sendPacketToUsbSpiAdapter @10
+    setupSpi @11
+    writePacketWithMasterI2c @12
     writeSlaveI2cTransmitterBuffer @13

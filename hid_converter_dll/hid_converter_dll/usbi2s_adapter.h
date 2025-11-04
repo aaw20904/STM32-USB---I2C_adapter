@@ -84,13 +84,13 @@ int DLL_EXPORT closeDevice (HANDLE* hSerial);
 int DLL_EXPORT resetI2cSetBothSpeedAndSlaveAddr(statesHandle * states, HANDLE* pHidHandle,
                                                 unsigned int speedBps, unsigned char slaveAddress);
 
-short DLL_EXPORT readPacketFromUsbI2cAdapter(statesHandle * states,
+short DLL_EXPORT readPacketWithMasterI2c(statesHandle * states,
                               HANDLE* pHidHandle,
                               unsigned char slaveAddress,
                               unsigned char* buffer,
                               unsigned short amountOfData);
 
-short DLL_EXPORT sendPacketToUsbI2cAdapter(statesHandle * states,
+short DLL_EXPORT writePacketWithMasterI2c(statesHandle * states,
                               HANDLE* pHidHandle,
                               unsigned char slaveAddress,
                               unsigned char* buffer,

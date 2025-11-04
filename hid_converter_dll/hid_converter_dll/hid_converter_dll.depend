@@ -8,3 +8,9 @@
 1762003113 d:\c_win_proj\hid_converter_dll\hid_converter_dll\usbi2s_adapter.h
 	<windows.h>
 
+1762266339 source:d:\win_proj\hid_converter_dll\hid_converter_dll\main.cpp
+	"usbi2s_adapter.h"
+
+1762255938 d:\win_proj\hid_converter_dll\hid_converter_dll\usbi2s_adapter.h
+	<windows.h>
+

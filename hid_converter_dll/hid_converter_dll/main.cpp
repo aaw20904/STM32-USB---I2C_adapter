@@ -15,6 +15,17 @@ void DLL_EXPORT SomeFunction(const LPCSTR sometext)
     MessageBoxA(0, sometext, "DLL Message", MB_OK | MB_ICONINFORMATION);
 }
 
+
+//The functions warppers for write/read 64 bytes in/from CDC  VCP
+//WINBOOL means int
+int writePacketToUsbDev(void* usbHandle, unsigned char* dataToWrite, unsigned long* bytesWritten) {
+  return (int)WriteFile((HANDLE)usbHandle,  dataToWrite, 64, (LPDWORD)bytesWritten, NULL);
+};
+
+int readPacketFromUsbDev(void* usbHandle, unsigned char* dataToRead,  unsigned long* bytesRead) {
+  return (int)ReadFile((HANDLE)usbHandle, dataToRead, 64, (LPDWORD)bytesRead, NULL);
+}
+
 /*
 H A R D W A R E   N O T E:
 The board - STM32F103 , well known as "blue pill".The I2C2 works as master device.
@@ -94,16 +105,17 @@ Set the slave address for the slave device and allows acknowledge.
 int DLL_EXPORT resetI2cSetBothSpeedAndSlaveAddr(statesHandle * states,HANDLE* pHidHandle,unsigned int speedBps,unsigned char slaveAddress) {
     unsigned char reportBufferHost[68]={0}; //incoming data for host
     unsigned char reportBufferDev[68]={0};  //outgoing data for device
-    DWORD bytesWritten;
+    unsigned long bytesWritten;
     reportBufferHost[0] = setup_interface_i2c;
     memcpy(reportBufferHost+4, &speedBps,4);
     memcpy(reportBufferHost+8, &slaveAddress,1);
-
-      if (!WriteFile(*pHidHandle, reportBufferHost, 64, &bytesWritten, NULL)) {
+     //WriteFile(*pHidHandle, reportBufferHost, 64, &bytesWritten, NULL)
+     //ReadFile(*pHidHandle, reportBufferDev, 64, &bytesWritten, NULL)
+      if (! writePacketToUsbDev(*pHidHandle, reportBufferHost, &bytesWritten)) {
 
            return GetLastError();
-    }
-       if (!ReadFile(*pHidHandle, reportBufferDev, 64, &bytesWritten, NULL)) {
+      }
+       if (! readPacketFromUsbDev(*pHidHandle, reportBufferDev, &bytesWritten)) {
 
               return GetLastError();
        }
@@ -157,13 +169,15 @@ short DLL_EXPORT readPacketFromUsbI2cAdapter(statesHandle * states,
     reportBufferDev[1] = (states->numBytesToTransaction & 0xff); //low byte
     reportBufferDev[2] = (states->numBytesToTransaction >> 8); //high byte
     reportBufferDev[3] = slaveAddress;   //slave address
-    if (!WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)) {
+
+    if (!writePacketToUsbDev(*pHidHandle, reportBufferDev, &bytesProcessed)) {
           // sprintf(messageBuffer, "Write failed with error %lu\n", GetLastError());
           // MessageBoxA(NULL, messageBuffer, "Notification", MB_OK | MB_ICONINFORMATION);
            return GetLastError();
     }
     //4)Wait a result of I2C read operation from a device:
-    if (!ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)) {
+
+    if (! readPacketFromUsbDev(*pHidHandle, reportBufferHost, &bytesProcessed)) {
 
               return GetLastError();
        }//Is an I2C transaction successfull?
@@ -176,12 +190,14 @@ short DLL_EXPORT readPacketFromUsbI2cAdapter(statesHandle * states,
      while (states->numUsbTransations > 1) {
           //5)Response to a device with 'read_from_i2c_dev'
           reportBufferDev[0] =  data_to_host;
-        if (!WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)) {
+
+        if (!writePacketToUsbDev(*pHidHandle, reportBufferDev,   &bytesProcessed)) {
 
               return GetLastError();
            }
         //a)read a chunks from a device cosequently::
-        if (!ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)) {
+
+        if (!readPacketFromUsbDev(*pHidHandle, reportBufferHost,   &bytesProcessed)) {
 
               return GetLastError();
            }
@@ -197,12 +213,15 @@ short DLL_EXPORT readPacketFromUsbI2cAdapter(statesHandle * states,
     //when only one byte remaind to transmit:
      //7)send the 'read_from_i2c_dev' to the USB device:
             reportBufferDev[0] =  data_to_host;
-    if (!WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)) {
+
+    if (!writePacketToUsbDev(*pHidHandle, reportBufferDev, &bytesProcessed)) {
 
            return GetLastError();
        }
     //8)read the last piece of data from slave:
-     if (!ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)) {
+    //ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)
+
+     if (!readPacketFromUsbDev(*pHidHandle, reportBufferHost, &bytesProcessed)) {
 
               return GetLastError();
         }
@@ -259,14 +278,17 @@ short DLL_EXPORT sendPacketToUsbI2cAdapter(statesHandle * states,
     reportBufferDev[2] = (states->numBytesToTransaction >> 8); //high byte
     reportBufferDev[3] = slaveAddress;   //slave address
     //4)Send data to the USB device (it is a blocking operation)
-      if (!WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)) {
+    //WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)
+
+      if (! writePacketToUsbDev(*pHidHandle, reportBufferDev,   &bytesProcessed)) {
 
            return GetLastError();
       }
     //5)iterate until the last USB transactiion:
     while (states->numUsbTransations > 1) {
         //a)await a signal "data_from_host" from a device:
-        if (!ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)) {
+        //ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)
+        if (!readPacketFromUsbDev(*pHidHandle, reportBufferHost, &bytesProcessed)) {
 
               return GetLastError();
            } if (reportBufferHost[0] != data_from_host) {
@@ -278,7 +300,8 @@ short DLL_EXPORT sendPacketToUsbI2cAdapter(statesHandle * states,
            //b.1)copying into the report_buffer:
            memcpy(reportBufferDev,states->buffPtr,64);
            //b.3)send the buffer to the USB device:
-         if (!WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)) {
+           //WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)
+         if (!writePacketToUsbDev(*pHidHandle, reportBufferDev,  &bytesProcessed)) {
            return GetLastError();
           }
          //c)Increase the pointer:
@@ -290,7 +313,9 @@ short DLL_EXPORT sendPacketToUsbI2cAdapter(statesHandle * states,
     }
     //6)When only one USB transaction left:
     //await for device`s response:
-      if (!ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)) {
+    //ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)
+
+    if (!readPacketFromUsbDev(*pHidHandle, reportBufferHost, &bytesProcessed)) {
         return GetLastError();
     } if (reportBufferHost[0] != data_from_host) {
        //("protocol error!"/
@@ -302,12 +327,15 @@ short DLL_EXPORT sendPacketToUsbI2cAdapter(statesHandle * states,
       //8.1)copying into the report_buffer:
        memcpy(reportBufferDev,states->buffPtr,states->numBytesToTransaction);
        //8.3)send the buffer to the USB device:
-     if (!WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)) {
+       //WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)
+
+     if (!writePacketToUsbDev(*pHidHandle, reportBufferDev,  &bytesProcessed)) {
         return GetLastError();
      }
     //9)Now the device starts I2C transmission of data, that has been received later
     //So, the host awaits for response with result:
-     if (!ReadFile (*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)) {
+    //ReadFile (*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)
+     if (!readPacketFromUsbDev(*pHidHandle, reportBufferHost,  &bytesProcessed)) {
       return GetLastError();
     }
     //10)return received result:
@@ -343,15 +371,15 @@ short DLL_EXPORT readLastSlaveI2cReceivedPacket (statesHandle * states,
     states->reassembledDataArray  = buffer;
     //2)Send request (read last received data i2c1) to a device:
     reportBufferDev[0] = states->typeOfAction; //operation code
-
-    if (!WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)) {
+   //WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)
+    if (!writePacketToUsbDev(*pHidHandle, reportBufferDev,  &bytesProcessed)) {
           // sprintf(messageBuffer, "Write failed with error %lu\n", GetLastError());
           // MessageBoxA(NULL, messageBuffer, "Notification", MB_OK | MB_ICONINFORMATION);
            return GetLastError();
     }
     //3) await and read status and total amount of last received (by a device) data:
-
-        if (!ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)) {
+      //ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)
+        if (!readPacketFromUsbDev(*pHidHandle, reportBufferHost, &bytesProcessed)) {
 
           return GetLastError();
        }
@@ -381,12 +409,14 @@ short DLL_EXPORT readLastSlaveI2cReceivedPacket (statesHandle * states,
      while (states->numUsbTransations > 1) {
           //5)Response to a device with 'read_from_i2c_dev'
           reportBufferDev[0] =  data_to_host;
-        if (!WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)) {
+          //WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)
+        if (!readPacketFromUsbDev(*pHidHandle, reportBufferDev, &bytesProcessed)) {
 
               return GetLastError();
            }
         //a)read a chunks from a device cosequently:
-        if (!ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)) {
+        //ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)
+        if (!readPacketFromUsbDev(*pHidHandle, reportBufferHost, &bytesProcessed)) {
 
               return GetLastError();
            }
@@ -403,12 +433,14 @@ short DLL_EXPORT readLastSlaveI2cReceivedPacket (statesHandle * states,
         //when only one byte remaind to transmit:
      //7)send the 'read_from_i2c_dev' to the USB device:
             reportBufferDev[0] =  data_to_host;
-    if (!WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)) {
+            //WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)
+    if (!writePacketToUsbDev(*pHidHandle, reportBufferDev,  &bytesProcessed)) {
 
            return GetLastError();
        }
     //8)read the last piece of data from slave:
-     if (!ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)) {
+    //ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)
+     if (!readPacketFromUsbDev(*pHidHandle, reportBufferHost, &bytesProcessed)) {
 
               return GetLastError();
         }
@@ -459,7 +491,7 @@ short DLL_EXPORT writeSlaveI2cTransmitterBuffer(statesHandle * states,
     reportBufferDev[2] = (states->numBytesToTransaction >> 8); //high byte (amount of data)
 
     //4)Send data to the USB device (it is a blocking operation)
-      if (!WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)) {
+      if (!writePacketToUsbDev(*pHidHandle, reportBufferDev,   &bytesProcessed )) {
 
            return GetLastError();
       }
@@ -467,7 +499,7 @@ short DLL_EXPORT writeSlaveI2cTransmitterBuffer(statesHandle * states,
     //5)iterate until the last USB transactiion:
     while (states->numUsbTransations > 1) {
         //a)await a signal "data_from_host" from a device:
-        if (!ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)) {
+        if (!readPacketFromUsbDev(*pHidHandle, reportBufferHost,   &bytesProcessed )) {
 
               return GetLastError();
            } if (reportBufferHost[0] != data_from_host) {
@@ -479,7 +511,7 @@ short DLL_EXPORT writeSlaveI2cTransmitterBuffer(statesHandle * states,
            //b.1)copying into the report_buffer:
            memcpy(reportBufferDev,states->buffPtr,64);
            //b.3)send the buffer to the USB device:
-         if (!WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)) {
+         if (!writePacketToUsbDev(*pHidHandle, reportBufferDev,   &bytesProcessed )) {
            return GetLastError();
           }
          //c)Increase the pointer:
@@ -491,7 +523,7 @@ short DLL_EXPORT writeSlaveI2cTransmitterBuffer(statesHandle * states,
     }
     //6)When only one USB transaction left:
     //await for device`s response:
-      if (!ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)) {
+      if (!readPacketFromUsbDev(*pHidHandle, reportBufferHost,  &bytesProcessed )) {
         return GetLastError();
     } if (reportBufferHost[0] != data_from_host) {
        //("protocol error!"/
@@ -503,7 +535,7 @@ short DLL_EXPORT writeSlaveI2cTransmitterBuffer(statesHandle * states,
       //8.1)copying into the report_buffer:
        memcpy(reportBufferDev,states->buffPtr,states->numBytesToTransaction);
        //8.3)send the buffer to the USB device:
-     if (!WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)) {
+     if (!writePacketToUsbDev(*pHidHandle, reportBufferDev,  &bytesProcessed )) {
         return GetLastError();
      }
      return 0;
@@ -550,14 +582,14 @@ short DLL_EXPORT writeSlaveI2cTransmitterBuffer(statesHandle * states,
     reportBufferDev[2] = (states->numBytesToTransaction >> 8); //high byte
 
     //4)Send data to the USB device (it is a blocking operation)
-      if (!WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)) {
+      if (!writePacketToUsbDev(*pHidHandle, reportBufferDev, &bytesProcessed )) {
 
            return GetLastError();
       }
     //5)iterate until the last USB transactiion:
     while (states->numUsbTransations > 1) {
         //a)await a signal "data_from_host" from a device:
-        if (!ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)) {
+        if (!readPacketFromUsbDev(*pHidHandle, reportBufferHost,   &bytesProcessed )) {
 
               return GetLastError();
            } if (reportBufferHost[0] != data_from_host) {
@@ -569,7 +601,7 @@ short DLL_EXPORT writeSlaveI2cTransmitterBuffer(statesHandle * states,
            //b.1)copying into the report_buffer:
            memcpy(reportBufferDev,states->buffPtr,64);
            //b.3)send the buffer to the USB device:
-         if (!WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)) {
+         if (!writePacketToUsbDev(*pHidHandle, reportBufferDev , &bytesProcessed )) {
            return GetLastError();
           }
          //c)Increase the pointer:
@@ -581,7 +613,7 @@ short DLL_EXPORT writeSlaveI2cTransmitterBuffer(statesHandle * states,
     }
     //6)When only one USB transaction left:
     //await for device`s response:
-      if (!ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)) {
+      if (!readPacketFromUsbDev(*pHidHandle, reportBufferHost , &bytesProcessed )) {
         return GetLastError();
     } if (reportBufferHost[0] != data_from_host) {
        //("protocol error!"/
@@ -593,12 +625,12 @@ short DLL_EXPORT writeSlaveI2cTransmitterBuffer(statesHandle * states,
       //8.1)copying into the report_buffer:
        memcpy(reportBufferDev,states->buffPtr,states->numBytesToTransaction);
        //8.3)send the buffer to the USB device:
-     if (!WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)) {
+     if (!writePacketToUsbDev(*pHidHandle, reportBufferDev,  &bytesProcessed )) {
         return GetLastError();
      }
     //9)Now the device starts I2C transmission of data, that has been received later
     //So, the host awaits for response with result:
-     if (!ReadFile (*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)) {
+     if (!readPacketFromUsbDev (*pHidHandle, reportBufferHost,  &bytesProcessed )) {
       return GetLastError();
     }
     //10)return received result:
@@ -639,13 +671,13 @@ short DLL_EXPORT readPacketFromUsbSpiAdapter(statesHandle * states,
     reportBufferDev[1] = (states->numBytesToTransaction & 0xff); //low byte
     reportBufferDev[2] = (states->numBytesToTransaction >> 8); //high byte
 
-    if (!WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)) {
+    if (!writePacketToUsbDev(*pHidHandle, reportBufferDev,   &bytesProcessed )) {
           // sprintf(messageBuffer, "Write failed with error %lu\n", GetLastError());
           // MessageBoxA(NULL, messageBuffer, "Notification", MB_OK | MB_ICONINFORMATION);
            return GetLastError();
     }
     //4)Wait a result of I2C read operation from a device:
-    if (!ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)) {
+    if (!readPacketFromUsbDev(*pHidHandle, reportBufferHost,  &bytesProcessed )) {
 
               return GetLastError();
        }//Is an I2C transaction successfull?
@@ -658,12 +690,12 @@ short DLL_EXPORT readPacketFromUsbSpiAdapter(statesHandle * states,
      while (states->numUsbTransations > 1) {
           //5)Response to a device with 'read_from_i2c_dev'
           reportBufferDev[0] =  data_to_host;
-        if (!WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)) {
+        if (!writePacketToUsbDev(*pHidHandle, reportBufferDev,   &bytesProcessed )) {
 
               return GetLastError();
            }
         //a)read a chunks from a device cosequently::
-        if (!ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)) {
+        if (!readPacketFromUsbDev(*pHidHandle, reportBufferHost,   &bytesProcessed )) {
 
               return GetLastError();
            }
@@ -679,12 +711,12 @@ short DLL_EXPORT readPacketFromUsbSpiAdapter(statesHandle * states,
     //when only one byte remaind to transmit:
      //7)send the 'read_from_i2c_dev' to the USB device:
             reportBufferDev[0] =  data_to_host;
-    if (!WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)) {
+    if (!writePacketToUsbDev(*pHidHandle, reportBufferDev, &bytesProcessed )) {
 
            return GetLastError();
        }
     //8)read the last piece of data from slave:
-     if (!ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)) {
+     if (!readPacketFromUsbDev(*pHidHandle, reportBufferHost,   &bytesProcessed )) {
 
               return GetLastError();
         }
@@ -739,14 +771,14 @@ short DLL_EXPORT readPacketFromUsbSpiAdapter(statesHandle * states,
     reportBufferDev[2] = (states->numBytesToTransaction >> 8); //high byte
 
     //4)Send data to the USB device (it is a blocking operation)
-      if (!WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)) {
+      if (!writePacketToUsbDev(*pHidHandle, reportBufferDev,   &bytesProcessed )) {
 
            return GetLastError();
       }
     //5)iterate until the last USB transactiion:
     while (states->numUsbTransations > 1) {
         //a)await a signal "data_from_host" from a device:
-        if (!ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)) {
+        if (!readPacketFromUsbDev(*pHidHandle, reportBufferHost, &bytesProcessed )) {
 
               return GetLastError();
            } if (reportBufferHost[0] != data_from_host) {
@@ -758,7 +790,7 @@ short DLL_EXPORT readPacketFromUsbSpiAdapter(statesHandle * states,
            //b.1)copying into the report_buffer:
            memcpy(reportBufferDev,states->buffPtr,64);
            //b.3)send the buffer to the USB device:
-         if (!WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)) {
+         if (!writePacketToUsbDev(*pHidHandle, reportBufferDev, &bytesProcessed )) {
            return GetLastError();
           }
          //c)Increase the pointer:
@@ -770,7 +802,7 @@ short DLL_EXPORT readPacketFromUsbSpiAdapter(statesHandle * states,
     }
     //6)When only one USB transaction left:
     //await for device`s response:
-      if (!ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)) {
+      if (!readPacketFromUsbDev(*pHidHandle, reportBufferHost,   &bytesProcessed )) {
         return GetLastError();
     } if (reportBufferHost[0] != data_from_host) {
        //("protocol error!"/
@@ -782,12 +814,12 @@ short DLL_EXPORT readPacketFromUsbSpiAdapter(statesHandle * states,
       //8.1)copying into the report_buffer:
        memcpy(reportBufferDev,states->buffPtr,states->numBytesToTransaction);
        //8.3)send the buffer to the USB device:
-     if (!WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)) {
+     if (!writePacketToUsbDev(*pHidHandle, reportBufferDev,  &bytesProcessed )) {
         return GetLastError();
      }
     //9)Now the device starts I2C transmission of data, that has been received later
     //So, the host awaits for response with result:
-     if (!ReadFile (*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)) {
+     if (!readPacketFromUsbDev (*pHidHandle, reportBufferHost,  &bytesProcessed )) {
       return GetLastError();
     }
 
@@ -805,12 +837,12 @@ short DLL_EXPORT readPacketFromUsbSpiAdapter(statesHandle * states,
        while (states->numUsbTransations > 1) {
           //)Response to a device with a data request
           reportBufferDev[0] =  data_to_host;
-        if (!WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)) {
+        if (!writePacketToUsbDev(*pHidHandle, reportBufferDev,   &bytesProcessed )) {
 
               return GetLastError();
            }
         //a)read a chunks from a device cosequently::
-        if (!ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)) {
+        if (!readPacketFromUsbDev(*pHidHandle, reportBufferHost,  &bytesProcessed )) {
 
               return GetLastError();
            }
@@ -826,12 +858,12 @@ short DLL_EXPORT readPacketFromUsbSpiAdapter(statesHandle * states,
     //when only one byte remaind to transmit:
      //12)send the 'read_from_i2c_dev' to the USB device:
             reportBufferDev[0] =  data_to_host;
-    if (!WriteFile(*pHidHandle, reportBufferDev, 64, &bytesProcessed, NULL)) {
+    if (!writePacketToUsbDev(*pHidHandle, reportBufferDev,  &bytesProcessed )) {
 
            return GetLastError();
        }
     //13)read the last piece of data from slave:
-     if (!ReadFile(*pHidHandle, reportBufferHost, 64, &bytesProcessed, NULL)) {
+     if (!readPacketFromUsbDev(*pHidHandle, reportBufferHost,   &bytesProcessed )) {
 
               return GetLastError();
         }
@@ -874,11 +906,11 @@ short DLL_EXPORT setupSpi (statesHandle * states,HANDLE* pHidHandle,
     memcpy(reportBufferHost+10, &ssHighPol,2);
 
 
-      if (!WriteFile(*pHidHandle, reportBufferHost, 64, &bytesWritten, NULL)) {
+      if (!writePacketToUsbDev(*pHidHandle, reportBufferHost,  &bytesWritten )) {
 
            return GetLastError();
     }
-       if (!ReadFile(*pHidHandle, reportBufferDev, 64, &bytesWritten, NULL)) {
+       if (!readPacketFromUsbDev(*pHidHandle, reportBufferDev,   &bytesWritten )) {
 
               return GetLastError();
        }

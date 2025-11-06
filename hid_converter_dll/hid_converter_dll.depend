@@ -1,0 +1,16 @@
+# depslib dependency file v1.0
+1762446898 source:d:\c_win_proj\hid_converter_dll\hid_converter_dll\main.cpp
+	"usbi2s_adapter.h"
+
+1758649057 d:\c_win_proj\hid_converter_dll\hid_converter_dll\main.h
+	<windows.h>
+
+1762445244 d:\c_win_proj\hid_converter_dll\hid_converter_dll\usbi2s_adapter.h
+	<windows.h>
+
+1762266339 source:d:\win_proj\hid_converter_dll\hid_converter_dll\main.cpp
+	"usbi2s_adapter.h"
+
+1762255938 d:\win_proj\hid_converter_dll\hid_converter_dll\usbi2s_adapter.h
+	<windows.h>
+

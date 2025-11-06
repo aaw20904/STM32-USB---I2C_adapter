@@ -51,12 +51,7 @@ unsigned char usbInBuffer[516];
 HMODULE hMyLib = NULL;
 
 
-WORD cp2112Version;
-BYTE cp2112PartNumber;
 
-
-DWORD bytesProcessedG;
-statesHandle mashineHandle;
 
 unsigned char usbInBuffer[516];
 
@@ -119,11 +114,12 @@ int main (void) {
 		"making a daisy-chain would be worth the trouble of getting up and "
 		"picking the daisies, when suddenly a White Rabbit, Buks Bunny, he eating a carrot /0");
 
-       if (openDevice(&hSerial,"\\\\.\\COM3" ) != 0){
+       if (openDevice(&hSerial,"\\\\.\\COM5" ) != 0){
          printf("COM port open fail %d",GetLastError());
          return -1;
        }
    /*Example for SPI*/
+   /*
        printf("Device opened successfully!\n");
        setupSpi(&mashineHandle,&hSerial,LL_SPI_POLARITY_HIGH,LL_SPI_PHASE_1EDGE,LL_SPI_BAUDRATEPRESCALER_DIV256,LL_SPI_MSB_FIRST,0);
         sendPacketToUsbSpiAdapter(&mashineHandle,&hSerial,textString,80);
@@ -131,22 +127,31 @@ int main (void) {
        readPacketFromUsbSpiAdapter(&mashineHandle,&hSerial,test,2);
        memset(test,0x00,256);
         fullDuplexSpiTransaction(&mashineHandle,&hSerial,textString,test,80);
-        printf("%s \n",test);
+        printf("%s \n",test);  */
 
   /*Example for I2C*/
-
+     printf("press enter to setup both I2C \n");
+     getchar();
        resetI2cSetBothSpeedAndSlaveAddr(&mashineHandle, &hSerial,10000, 40);
+        printf("Setup I2C has been done.Press enter \n");
+     getchar();
        //send 100 bytes through master Tx to slave Rx
-       printf("Write status: %d \n", writePacketWithMasterI2c(&mashineHandle, &hSerial,40,usbOutBuffer,0x0064));
+       printf("Write 'So she was..' master I2C2 has been done.Press enter to next. \n Status: %d \n", writePacketWithMasterI2c(&mashineHandle, &hSerial,40,usbOutBuffer,0x0064));
+          getchar();
           //write in slave Tx buffer (about hole rabbit)
           writeSlaveI2cTransmitterBuffer(&mashineHandle,&hSerial,textString,0x0064);
+           printf("Write 'The rabbit..' into slave I2C1 Tx buffer has been done.Press enter \n");
+     getchar();
           //read data by master Rx, from slave Tx
-       printf("read status: %d \n", readPacketWithMasterI2c(&mashineHandle, &hSerial,40,usbInBuffer,0x0064));
-       printf("%s \n", usbInBuffer);
-       writePacketWithMasterI2c(&mashineHandle,&hSerial,40,textString,0x0064);
+       printf("Read by master I2C2 has been done.Press ENTER.Status is: %d \n", readPacketWithMasterI2c(&mashineHandle, &hSerial,40,usbInBuffer,0x0064));
+       getchar();
+       printf("The data that had been read by master 'The rabbit..': %s \n Press enter to next \n", usbInBuffer);
+       getchar();
+
          //read data from slave Rx buffer
       readLastSlaveI2cReceivedPacket(&mashineHandle,&hSerial,usbInBuffer,&slaveDeviceDataCount);
-      printf("%s \n", usbInBuffer);
+      printf("The data from slave I2C1 Rx has been read. \n  ");
+      printf("The data from slave I2C1 Rx is 'So she was..' %s \n Finish \n", usbInBuffer);
         ///at the end - close COM port
 
 

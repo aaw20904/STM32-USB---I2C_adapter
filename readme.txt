@@ -7,3 +7,4 @@ The software uses USB as a transport and Virtual COM port.
 The API functions described inside C sources  in "hid_converter_dll" folder
 I2C2 - The master, I2C1-the slave
 SPI1 - Master full duplex mode
+https://ejaaskel.dev/making-usb-device-with-stm32-tinyusb/
